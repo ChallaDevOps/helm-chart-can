@@ -30,7 +30,7 @@ jobs:
 
       - name: Deploy Helm chart
         run: |
-          helm upgrade --install frontend ./helm-chart-can \
+          helm upgrade --install frontend ./helmcharts \
             -n frontend-dev \
             -f docker-dev-fe-values.yaml \
             --atomic --create-namespace
