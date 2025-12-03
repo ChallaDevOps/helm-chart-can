@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-  {{- with .Values.app.deployment.annotations }}
+  {{- with .Values.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -18,19 +18,19 @@ spec:
       app: {{ .Values.app.name }}
   strategy:
     canary:
-      {{- if .Values.app.deployment.rollout.strategy.trafficRouting.enabled }}
+      {{- if .Values.rollout.strategy.trafficRouting.enabled }}
       trafficRouting:
         istio:
           virtualService:
             name: {{ .Values.app.name }}-vs
           destinationRule:
             name: {{ .Values.app.name }}-destinationrule
-            canarySubsetName: {{ .Values.app.deployment.rollout.strategy.trafficRouting.canarySubsetName | default "canary" }}
-            stableSubsetName: {{ .Values.app.deployment.rollout.strategy.trafficRouting.stableSubsetName | default "stable" }}
+            canarySubsetName: {{ .Values.rollout.strategy.trafficRouting.canarySubsetName | default "canary" }}
+            stableSubsetName: {{ .Values.rollout.strategy.trafficRouting.stableSubsetName | default "stable" }}
       {{- end }}
-      {{- if .Values.deployment.rollout.strategy.steps }}
+      {{- if .Values.rollout.strategy.steps }}
       steps:
-        {{- toYaml .Values.deployment.rollout.strategy.steps | nindent 6 }}
+        {{- toYaml .Values.rollout.strategy.steps | nindent 6 }}
       {{- else }}
       steps: []
       {{- end }}
