@@ -1,4 +1,4 @@
-{{- if and (eq .Values.workloads.type "deployment") (hasKey .Values "deployment") (hasKey .Values.deployment "rollout") (hasKey .Values "deployment") .Values.deployment.rollout.enabled }}
+{{- if and (eq .Values.workloads.type "deployment") (hasKey .Values "deployment") (hasKey .Values.app.deployment "rollout") (hasKey .Values "deployment") .Values.rollout.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
