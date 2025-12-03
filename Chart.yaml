@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: "1.16.0"
+description: A Helm chart for Kubernetes TPO application with Ingress and SS0
+# 'A modular and reusable Helm chart designed to standardize application
+#   deployments across environments.  Built with flexibility and scalability in mind,
+#   this chart supports customizable configurations for diverse workloads.  Ideal for
+#   teams adopting GitOps and looking to streamline deployment pipelines with consistency
+#   and control. '
+name: tpo
+type: application
+version: 0.1.0

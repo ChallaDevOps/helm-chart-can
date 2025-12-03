@@ -1,0 +1,289 @@
+# -----------------------------------
+# Workload Type
+# -----------------------------------
+workloads:
+  type: deployment 
+
+# -----------------------------------
+# Application Info
+# -----------------------------------
+app:
+  name: frontend
+  image: 1213117676/my-frontend:a6c11938e0d0d0adb53cb24311ae3afd734659be
+  #secretMountPath: /mnt/secrets 
+  labels:
+    environment: dev
+    team: backend
+  annotations:
+    description: "My can frontend deployment"
+    owner: "dev-team"
+  deployment:
+    name: frontend
+    enabled: true
+    replicas: 2
+    labels:
+      environment: dev
+      team: backend
+    annotations:
+      description: "My can frontend deployment"
+      owner: "dev-team"
+    persistenceVolumeClaims: false
+replicaCount: 1
+resources:
+  enabled: true
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+# -----------------------------------
+# Image Pull Secrets
+# -----------------------------------
+imagePullSecrets:
+  name: my-registry-secret
+  dockerconfigjson: /path/to/.docker/config.json.  ##need to check
+
+# -----------------------------------
+# Probes
+# -----------------------------------
+probes:
+  enabled: true
+  livenessPath: /healthz
+  readinessPath: /ready
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+
+# -----------------------------------
+# Ingress
+# -----------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  name: frontend-ingress
+  annotations:
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  tls:
+    - hosts:
+        - dev-frontend.com
+        - api.frontend.com
+      secretName: ingress-tls-secret
+  hosts:
+    - host: dev-frontend.example.com
+      paths:
+        - path: /admin/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: admin-svc
+            servicePort: 8000
+
+        - path: /customer-config/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: customer-config-svc
+            servicePort: 8000
+
+        - path: /reports/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: reports-svc
+            servicePort: 8000
+
+        - path: /ums/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: ums-svc
+            servicePort: 8000
+        
+        - path: /promotions/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: promotions-svc
+            servicePort: 8000
+
+        - path: /scenario-manager/?(.*)
+          pathType: Prefix
+          backend:
+            serviceName: scenario-manager-svc
+            servicePort: 8000
+
+# -----------------------------------
+# Autoscaling
+# -----------------------------------
+autoscaling:
+  enabled: true
+  deploymentName: frontend-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+
+# -----------------------------------
+# TLS Secret
+# -----------------------------------
+tlsSecret:
+  enabled: true
+  name: my-tls-secret
+  refreshInterval: 60m
+  certKey: my-tls-cert
+  keyKey: my-tls-key
+service:
+  name: dev-frontend-svc
+  type: ClusterIP
+  port: 3000  
+# -----------------------------------
+# External Secrets
+# -----------------------------------
+externalSecrets:
+  enabled: true
+  name: fe-app-secrets
+  refreshInterval: 1h
+
+  secrets:
+    - name: dev-aks-keys #app-env-secret
+      secretKey: dockerhub-user   #VITE_REACT_APP_BACKEND
+      remoteRef: dockerhub-user        #VITE-REACT-APP-BACKEND-DEV
+    
+      secretKey: dockerhub-password   #VITE_REACT_APP_BACKEND
+      remoteRef: dockerhub-password        #VITE-REACT-APP-BACKEND-DEV
+
+    
+    #   secretKey: VITE_MSAL_CLIENT_ID
+    #   remoteRef: VITE-MSAL-CLIENT-ID-DEV
+
+    # - secretKey: VITE_MSAL_AUTHORITY
+    #   remoteRef: VITE-MSAL-AUTHORITY-DEV
+
+    # - secretKey: VITE_MSAL_REDIRECT_URI
+    #   remoteRef: VITE-MSAL-REDIRECT-URI-DEV
+
+
+
+
+  # -----------------------------------
+  # Argo Rollout Configuration (can be enabled in future)
+  # -----------------------------------
+  rollout:
+    enabled: false   # Set to true to enable Argo Rollout
+    strategy:
+      trafficRouting:
+        enabled: false   # Enable Istio traffic routing when needed
+        canarySubsetName: canary
+        stableSubsetName: stable
+      steps:               # Define rollout steps for canary deployment
+        - setWeight: 20
+        - pause: 
+            duration: 10s
+        - setWeight: 50
+        - pause:
+            duration: 10s
+        - setWeight: 100
+
+
+# -----------------------------------
+# StatefulSet Configuration
+# -----------------------------------
+statefulset:
+  enabled: false
+  replicas: 3
+
+  # Service for StatefulSet
+  service:
+    type: headless               # "headless", "ClusterIP", "LoadBalancer"
+    nameOverride: my-sql-db-svc
+    annotations:
+      example.com/annotation: "statefulset-service"
+    publishNotReadyAddresses: true
+    ipFamilies:
+      - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+      - name: http
+        port: 80
+        containerPort: 8080
+        protocol: TCP
+        appProtocol: http
+
+  # Pod annotations
+  annotations:
+    example.com/annotation: "statefulset-pod"
+
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+
+  # Optional affinity/tolerations
+  affinity: {}
+  tolerations: []
+
+  # Optional priority class and termination
+  priorityClassName: ""
+  terminationGracePeriodSeconds: 30
+
+  # Init containers
+  initContainers:
+    - name: init-db
+      image: busybox:1.35
+      command: ["sh", "-c", "echo Initializing database..."]
+
+  # Containers
+  containers:
+    - name: mysql
+      image: mysql:8.0
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-db-secret
+              key: password
+      volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+
+  # Volumes (non-PVC)
+  volumes:
+    - name: config
+      configMap:
+        name: my-db-config
+
+
+# -----------------------------------
+# Storage Classes
+# -----------------------------------
+storageClasses:
+  - name: standard
+    enabled: true
+    provisioner: efs.csi.aws.com
+    provisioningMode: efs-ap
+    fileSystemId: fs-12345678
+    directoryPerms: "700"
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    allowVolumeExpansion: true
+
+  - name: fast
+    enabled: false
+    provisioner: ebs.csi.aws.com
+    provisioningMode: gp2
+    fileSystemId: fs-87654321
+    directoryPerms: "755"
+    reclaimPolicy: Retain
+    volumeBindingMode: WaitForFirstConsumer
+    allowVolumeExpansion: false

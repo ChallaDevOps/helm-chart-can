@@ -1,0 +1,16 @@
+{{- if and .Values.deployment .Values.deployment.persistenceVolumeClaims }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.app.name }}-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ $.Release.Namespace }}-{{ .Values.deployment.persistenceVolumeClaims.storageclass }}
+  resources:
+    requests:
+      storage: {{ .Values.deployment.persistenceVolumeClaims.size }}
+{{- end }}
