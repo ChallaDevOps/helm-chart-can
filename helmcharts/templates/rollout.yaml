@@ -6,27 +6,27 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-  {{- with .Values.deployment.annotations }}
+  {{- with .Values.app.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ .Values.deployment.replicas | default 1 }}
+  replicas: {{ .Values.app.deployment.replicas | default 1 }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: {{ .Values.app.name }}
   strategy:
     canary:
-      {{- if .Values.deployment.rollout.strategy.trafficRouting.enabled }}
+      {{- if .Values.app.deployment.rollout.strategy.trafficRouting.enabled }}
       trafficRouting:
         istio:
           virtualService:
             name: {{ .Values.app.name }}-vs
           destinationRule:
             name: {{ .Values.app.name }}-destinationrule
-            canarySubsetName: {{ .Values.deployment.rollout.strategy.trafficRouting.canarySubsetName | default "canary" }}
-            stableSubsetName: {{ .Values.deployment.rollout.strategy.trafficRouting.stableSubsetName | default "stable" }}
+            canarySubsetName: {{ .Values.app.deployment.rollout.strategy.trafficRouting.canarySubsetName | default "canary" }}
+            stableSubsetName: {{ .Values.app.deployment.rollout.strategy.trafficRouting.stableSubsetName | default "stable" }}
       {{- end }}
       {{- if .Values.deployment.rollout.strategy.steps }}
       steps:
