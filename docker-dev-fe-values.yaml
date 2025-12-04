@@ -174,25 +174,24 @@ externalSecrets:
 
 
 
-  # -----------------------------------
-  # Argo Rollout Configuration (can be enabled in future)
-  # -----------------------------------
-  rollout:
-    enabled: false   # Set to true to enable Argo Rollout
-    strategy:
-      trafficRouting:
-        enabled: false   # Enable Istio traffic routing when needed
-        canarySubsetName: canary
-        stableSubsetName: stable
-      steps:               # Define rollout steps for canary deployment
-        - setWeight: 20
-        - pause: 
-            duration: 10s
-        - setWeight: 50
-        - pause:
-            duration: 10s
-        - setWeight: 100
-
+# -----------------------------------
+# Argo Rollout Configuration (can be enabled in future)
+# -----------------------------------
+rollout:
+  enabled: false   # Set to true to enable Argo Rollout
+  strategy:
+    trafficRouting:
+      enabled: false   # Enable Istio traffic routing when needed
+      canarySubsetName: canary
+      stableSubsetName: stable
+    steps:               # Define rollout steps for canary deployment
+      - setWeight: 20
+      - pause: 
+          duration: 10s
+      - setWeight: 50
+      - pause:
+          duration: 10s
+      - setWeight: 100
 
 # -----------------------------------
 # StatefulSet Configuration
