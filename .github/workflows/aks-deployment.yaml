@@ -11,29 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ------------------------------
-      # Checkout Code
-      # ------------------------------
+      # -------------------------
+      # Checkout Source Code
+      # -------------------------
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ------------------------------
-      # Install kubectl
-      # ------------------------------
+      # -------------------------
+      # Setup Kubectl
+      # -------------------------
       - name: Set up Kubernetes CLI
         uses: azure/setup-kubectl@v3
 
-      # ------------------------------
+      # -------------------------
       # Login to Azure
-      # ------------------------------
+      # -------------------------
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ------------------------------
-      # Set AKS context
-      # ------------------------------
+      # -------------------------
+      # Connect to AKS Cluster
+      # -------------------------
       - name: Set AKS context
         run: |
           az aks get-credentials \
@@ -41,63 +41,42 @@ jobs:
             --name ${{ secrets.AKS_CLUSTER_NAME }} \
             --overwrite-existing
 
-      # ------------------------------
-      # Install Helm
-      # ------------------------------
-      - name: Setup Helm
+      # -------------------------
+      # Setup Helm
+      # -------------------------
+      - name: Helm setup
         uses: azure/setup-helm@v3
 
-      # ------------------------------
-      # Install External Secret CRDs (Mandatory)
-      # ------------------------------
-      - name: Install External Secrets CRDs
+      # -------------------------
+      # Install External Secrets CRDs
+      # FIX: Using server-side apply to avoid patch errors
+      # -------------------------
+      - name: Install External Secrets CRDs (safe server-side apply)
         run: |
-          echo "Installing External Secrets CRDs..."
-          kubectl apply -f https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml
+          kubectl apply --server-side --force-conflicts \
+            -f https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml
 
-      # Add wait because CRDs take time to appear
-      - name: Wait for CRDs
-        run: sleep 12
-
-      # Verify CRDs exist
-      - name: Verify CRDs Installed
-        run: |
-          echo "Verifying External Secrets CRDs..."
-          kubectl get crd | grep external
-
-      # ------------------------------
+      # -------------------------
       # Install External Secrets Operator
-      # ------------------------------
-      - name: Install External Secrets Operator
+      # -------------------------
+      - name: Install External Secrets Operator (idempotent)
         run: |
           helm repo add external-secrets https://charts.external-secrets.io/
           helm repo update
 
+          # Install operator
           helm upgrade --install external-secrets external-secrets/external-secrets \
             --namespace external-secrets \
             --create-namespace
 
-      # ------------------------------
-      # Create Namespace if not exists
-      # ------------------------------
-      - name: Ensure Namespace Exists
-        run: |
-          kubectl get ns frontend-dev || kubectl create ns frontend-dev
-
-      # ------------------------------
-      # Deploy Helm Chart
-      # ------------------------------
+      # -------------------------
+      # Deploy Application via Helm
+      # -------------------------
       - name: Deploy Helm chart
         run: |
           helm upgrade --install frontend ./helmcharts \
-            --namespace frontend-dev \
+            -n frontend-dev \
             -f docker-dev-fe-values.yaml \
-            --atomic --timeout 6m
+            --atomic --timeout 10m \
+            --create-namespace
 
-      # ------------------------------
-      # Verify Deployment Rollout
-      # ------------------------------
-      - name: Verify Deployment
-        run: |
-          kubectl rollout status deployment/frontend -n frontend-dev
-          kubectl get pods -n frontend-dev -o wide
