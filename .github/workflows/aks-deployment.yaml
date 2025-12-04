@@ -27,6 +27,12 @@ jobs:
 
       - name: Helm setup
         uses: azure/setup-helm@v3
+      - name: Install External Secrets Operator (idempotent)
+        run: |
+          helm repo add external-secrets https://charts.external-secrets.io/
+          helm repo update
+          helm upgrade --install external-secrets external-secrets/external-secrets \
+            --namespace external-secrets --create-namespace
 
       - name: Deploy Helm chart
         run: |
