@@ -1,4 +1,4 @@
-{{- if and .Values.deployment .Values.deployment.persistenceVolumeClaims }}
+{{- if and .Values.app.deployment .Values.app.deployment.persistenceVolumeClaims }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
