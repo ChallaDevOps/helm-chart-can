@@ -2,8 +2,8 @@
   (eq .Values.workloads.type "deployment") 
   (hasKey .Values "deployment") 
   (or 
-    (not (hasKey .Values.deployment "rollout")) 
-    (not .Values.deployment.rollout.enabled)
+    (not (hasKey .Values "rollout")) 
+    (not .Values.rollout.enabled)
   ) 
 }}
 apiVersion: apps/v1
