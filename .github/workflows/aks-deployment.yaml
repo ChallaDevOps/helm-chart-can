@@ -9,34 +9,95 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # ------------------------------
+      # Checkout Code
+      # ------------------------------
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # ------------------------------
+      # Install kubectl
+      # ------------------------------
       - name: Set up Kubernetes CLI
         uses: azure/setup-kubectl@v3
 
+      # ------------------------------
+      # Login to Azure
+      # ------------------------------
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # ------------------------------
+      # Set AKS context
+      # ------------------------------
       - name: Set AKS context
         run: |
-          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }}
+          az aks get-credentials \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
 
-      - name: Helm setup
+      # ------------------------------
+      # Install Helm
+      # ------------------------------
+      - name: Setup Helm
         uses: azure/setup-helm@v3
-      - name: Install External Secrets Operator (idempotent)
+
+      # ------------------------------
+      # Install External Secret CRDs (Mandatory)
+      # ------------------------------
+      - name: Install External Secrets CRDs
+        run: |
+          echo "Installing External Secrets CRDs..."
+          kubectl apply -f https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml
+
+      # Add wait because CRDs take time to appear
+      - name: Wait for CRDs
+        run: sleep 12
+
+      # Verify CRDs exist
+      - name: Verify CRDs Installed
+        run: |
+          echo "Verifying External Secrets CRDs..."
+          kubectl get crd | grep external
+
+      # ------------------------------
+      # Install External Secrets Operator
+      # ------------------------------
+      - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io/
           helm repo update
-          helm upgrade --install external-secrets external-secrets/external-secrets \
-            --namespace external-secrets --create-namespace
 
+          helm upgrade --install external-secrets external-secrets/external-secrets \
+            --namespace external-secrets \
+            --create-namespace
+
+      # ------------------------------
+      # Create Namespace if not exists
+      # ------------------------------
+      - name: Ensure Namespace Exists
+        run: |
+          kubectl get ns frontend-dev || kubectl create ns frontend-dev
+
+      # ------------------------------
+      # Deploy Helm Chart
+      # ------------------------------
       - name: Deploy Helm chart
         run: |
           helm upgrade --install frontend ./helmcharts \
-            -n frontend-dev \
+            --namespace frontend-dev \
             -f docker-dev-fe-values.yaml \
-            --atomic --create-namespace
+            --atomic --timeout 6m
+
+      # ------------------------------
+      # Verify Deployment Rollout
+      # ------------------------------
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/frontend -n frontend-dev
+          kubectl get pods -n frontend-dev -o wide
